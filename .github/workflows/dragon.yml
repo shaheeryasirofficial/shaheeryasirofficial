@@ -1,0 +1,190 @@
+name: Generate dragon contribution graph
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  generate:
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Fetch contribution data and generate dragon SVG
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          USERNAME: ${{ github.repository_owner }}
+        run: |
+          cat << 'EOF' > generate.mjs
+          import { execSync } from 'child_process'
+          import fs from 'fs'
+
+          const username = process.env.USERNAME
+          const token = process.env.GITHUB_TOKEN
+
+          // Fetch contribution data via GitHub GraphQL API
+          const query = `{
+            user(login: "${username}") {
+              contributionsCollection {
+                contributionCalendar {
+                  weeks {
+                    contributionDays {
+                      contributionCount
+                      date
+                    }
+                  }
+                }
+              }
+            }
+          }`
+
+          const res = await fetch('https://api.github.com/graphql', {
+            method: 'POST',
+            headers: {
+              'Authorization': `bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ query })
+          })
+
+          const data = await res.json()
+          const weeks = data.data.user.contributionsCollection.contributionCalendar.weeks
+
+          // Grid dimensions
+          const cellSize = 12
+          const gap = 2
+          const cols = weeks.length
+          const rows = 7
+          const gridW = cols * (cellSize + gap)
+          const gridH = rows * (cellSize + gap)
+          const padLeft = 20
+          const padTop = 60
+          const svgW = gridW + padLeft + 120
+          const svgH = gridH + padTop + 40
+
+          // Color scale (dark theme — deep red to bright red)
+          const colors = ['#161b22', '#3d0000', '#7a0000', '#b30000', '#ff2d55']
+          const getColor = (count) => {
+            if (count === 0) return colors[0]
+            if (count <= 2) return colors[1]
+            if (count <= 5) return colors[2]
+            if (count <= 10) return colors[3]
+            return colors[4]
+          }
+
+          // Build grid cells
+          let cells = ''
+          weeks.forEach((week, wi) => {
+            week.contributionDays.forEach((day, di) => {
+              const x = padLeft + wi * (cellSize + gap)
+              const y = padTop + di * (cellSize + gap)
+              const color = getColor(day.contributionCount)
+              cells += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${color}" opacity="0.9"><title>${day.date}: ${day.contributionCount} contributions</title></rect>\n`
+            })
+          })
+
+          // Dragon sprite (pixel art, drawn right of grid, ~50x60px)
+          const dx = padLeft + gridW + 12
+          const dy = padTop
+          const ps = 4 // pixel size
+
+          // Dragon pixel art map (row by row, 0=transparent, 1=body, 2=wing, 3=eye/fire)
+          const dragon = [
+            [0,0,0,1,1,0,0,0,0,0],
+            [0,0,1,1,1,1,0,0,0,0],
+            [0,1,1,3,1,1,1,0,0,0],
+            [1,1,1,1,1,1,1,1,0,0],
+            [1,2,1,1,1,1,1,2,1,0],
+            [0,2,2,1,1,1,2,2,0,0],
+            [0,0,2,2,1,2,2,0,0,0],
+            [0,0,0,1,1,1,0,0,0,0],
+            [0,0,1,1,0,1,1,0,0,0],
+            [0,1,1,0,0,0,1,1,0,0],
+            [0,0,3,3,0,3,3,0,0,0],
+          ]
+
+          const dragonColors = { 1: '#cc0000', 2: '#7a0000', 3: '#ff9900' }
+          let dragonPixels = ''
+          dragon.forEach((row, ri) => {
+            row.forEach((val, ci) => {
+              if (val === 0) return
+              dragonPixels += `<rect x="${dx + ci*ps}" y="${dy + ri*ps + 10}" width="${ps}" height="${ps}" fill="${dragonColors[val]}"/>\n`
+            })
+          })
+
+          // Fire breath animation
+          const fireX = dx
+          const fireY = dy + 2 * ps + 10
+          const firePath = `M${fireX},${fireY} Q${fireX-20},${fireY+8} ${fireX-40},${fireY+4} Q${fireX-20},${fireY+16} ${fireX-50},${fireY+20}`
+
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
+            <defs>
+              <radialGradient id="fireglow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" style="stop-color:#ff9900;stop-opacity:0.8"/>
+                <stop offset="100%" style="stop-color:#cc0000;stop-opacity:0"/>
+              </radialGradient>
+            </defs>
+
+            <!-- Background -->
+            <rect width="${svgW}" height="${svgH}" fill="#0d1117" rx="8"/>
+
+            <!-- Title -->
+            <text x="${padLeft}" y="30" font-family="'Courier New',monospace" font-size="12"
+              fill="#ff2d55" letter-spacing="3" opacity="0.9">CONTRIBUTION DRAGON</text>
+            <line x1="${padLeft}" y1="38" x2="${padLeft + gridW}" y2="38" stroke="#ff2d55" stroke-width="0.5" opacity="0.3"/>
+
+            <!-- Contribution grid -->
+            ${cells}
+
+            <!-- Dragon sprite -->
+            ${dragonPixels}
+
+            <!-- Fire breath (animated) -->
+            <path d="${firePath}" stroke="#ff9900" stroke-width="3" fill="none" opacity="0" stroke-linecap="round">
+              <animate attributeName="opacity" values="0;0.9;0.6;0.9;0" dur="2s" repeatCount="indefinite"/>
+              <animate attributeName="stroke-width" values="3;5;3;5;3" dur="2s" repeatCount="indefinite"/>
+            </path>
+            <path d="${firePath}" stroke="#ffcc00" stroke-width="1.5" fill="none" opacity="0" stroke-linecap="round">
+              <animate attributeName="opacity" values="0;1;0.7;1;0" dur="2s" repeatCount="indefinite" begin="0.1s"/>
+            </path>
+
+            <!-- Glow under dragon -->
+            <ellipse cx="${dx + 20}" cy="${dy + 55}" rx="20" ry="6" fill="url(#fireglow)">
+              <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/>
+            </ellipse>
+
+            <!-- Legend -->
+            <text x="${padLeft}" y="${padTop + gridH + 20}" font-family="'Courier New',monospace"
+              font-size="9" fill="#8b949e" letter-spacing="1">LESS</text>
+            ${colors.map((c, i) => `<rect x="${padLeft + 35 + i*16}" y="${padTop + gridH + 10}" width="12" height="12" rx="2" fill="${c}"/>`).join('')}
+            <text x="${padLeft + 35 + colors.length*16 + 4}" y="${padTop + gridH + 20}"
+              font-family="'Courier New',monospace" font-size="9" fill="#8b949e" letter-spacing="1">MORE</text>
+          </svg>`
+
+          fs.mkdirSync('dist', { recursive: true })
+          fs.writeFileSync('dist/dragon-contribution-graph.svg', svg)
+          console.log('Dragon SVG generated.')
+          EOF
+          node generate.mjs
+
+      - name: Push to output branch
+        uses: crazy-max/ghaction-github-pages@v3.1.0
+        with:
+          target_branch: output
+          build_dir: dist
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
