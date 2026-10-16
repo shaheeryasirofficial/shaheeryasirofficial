@@ -13,7 +13,7 @@ jobs:
     permissions:
       contents: write
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -24,19 +24,17 @@ jobs:
         with:
           node-version: 18
 
-      - name: Fetch contribution data and generate dragon SVG
+      - name: Generate dragon SVG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ github.repository_owner }}
         run: |
-          cat << 'EOF' > generate.mjs
-          import { execSync } from 'child_process'
+          cat << 'SCRIPT' > generate.mjs
           import fs from 'fs'
 
           const username = process.env.USERNAME
           const token = process.env.GITHUB_TOKEN
 
-          // Fetch contribution data via GitHub GraphQL API
           const query = `{
             user(login: "${username}") {
               contributionsCollection {
@@ -64,121 +62,175 @@ jobs:
           const data = await res.json()
           const weeks = data.data.user.contributionsCollection.contributionCalendar.weeks
 
-          // Grid dimensions
-          const cellSize = 12
-          const gap = 2
+          const cell = 12
+          const gap = 3
+          const padX = 16
+          const padY = 50
           const cols = weeks.length
           const rows = 7
-          const gridW = cols * (cellSize + gap)
-          const gridH = rows * (cellSize + gap)
-          const padLeft = 20
-          const padTop = 60
-          const svgW = gridW + padLeft + 120
-          const svgH = gridH + padTop + 40
+          const gridW = cols * (cell + gap)
+          const gridH = rows * (cell + gap)
+          const svgW = gridW + padX * 2
+          const svgH = gridH + padY + 50
 
-          // Color scale (dark theme — deep red to bright red)
           const colors = ['#161b22', '#3d0000', '#7a0000', '#b30000', '#ff2d55']
-          const getColor = (count) => {
-            if (count === 0) return colors[0]
-            if (count <= 2) return colors[1]
-            if (count <= 5) return colors[2]
-            if (count <= 10) return colors[3]
-            return colors[4]
-          }
+          const getColor = c => c === 0 ? colors[0] : c <= 2 ? colors[1] : c <= 5 ? colors[2] : c <= 10 ? colors[3] : colors[4]
 
-          // Build grid cells
+          // Build cells and collect "eaten" cell positions (non-zero contributions)
           let cells = ''
+          const trail = [] // positions dragon will pass through
+
           weeks.forEach((week, wi) => {
             week.contributionDays.forEach((day, di) => {
-              const x = padLeft + wi * (cellSize + gap)
-              const y = padTop + di * (cellSize + gap)
+              const x = padX + wi * (cell + gap)
+              const y = padY + di * (cell + gap)
               const color = getColor(day.contributionCount)
-              cells += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" rx="2" fill="${color}" opacity="0.9"><title>${day.date}: ${day.contributionCount} contributions</title></rect>\n`
+              const id = `c${wi}_${di}`
+              cells += `<rect id="${id}" x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${color}"/>\n`
+              if (day.contributionCount > 0) trail.push({ x: x + cell/2, y: y + cell/2, id })
             })
           })
 
-          // Dragon sprite (pixel art, drawn right of grid, ~50x60px)
-          const dx = padLeft + gridW + 12
-          const dy = padTop
-          const ps = 4 // pixel size
+          // Dragon motion path — snake through rows like the snk action
+          // Build a serpentine path across the grid
+          let pathPoints = []
+          for (let di = 0; di < rows; di++) {
+            if (di % 2 === 0) {
+              for (let wi = 0; wi < cols; wi++) {
+                pathPoints.push({ x: padX + wi*(cell+gap) + cell/2, y: padY + di*(cell+gap) + cell/2 })
+              }
+            } else {
+              for (let wi = cols-1; wi >= 0; wi--) {
+                pathPoints.push({ x: padX + wi*(cell+gap) + cell/2, y: padY + di*(cell+gap) + cell/2 })
+              }
+            }
+          }
 
-          // Dragon pixel art map (row by row, 0=transparent, 1=body, 2=wing, 3=eye/fire)
-          const dragon = [
-            [0,0,0,1,1,0,0,0,0,0],
-            [0,0,1,1,1,1,0,0,0,0],
-            [0,1,1,3,1,1,1,0,0,0],
-            [1,1,1,1,1,1,1,1,0,0],
-            [1,2,1,1,1,1,1,2,1,0],
-            [0,2,2,1,1,1,2,2,0,0],
-            [0,0,2,2,1,2,2,0,0,0],
-            [0,0,0,1,1,1,0,0,0,0],
-            [0,0,1,1,0,1,1,0,0,0],
-            [0,1,1,0,0,0,1,1,0,0],
-            [0,0,3,3,0,3,3,0,0,0],
+          const motionPath = 'M ' + pathPoints.map(p => `${p.x},${p.y}`).join(' L ')
+          const totalDur = 20 // seconds for full loop
+
+          // Dragon sprite as inline SVG group (pixel art, 5x7 pixels at size 3)
+          // Head facing right
+          const ps = 3
+          const dragonPixels = [
+            // row 0
+            [0,0,1,1,0,0,1,0],
+            // row 1
+            [0,1,1,1,1,1,1,0],
+            // row 2
+            [1,1,3,1,1,1,1,1],
+            // row 3
+            [1,1,1,1,1,1,1,1],
+            // row 4
+            [0,2,1,1,1,1,2,0],
+            // row 5
+            [0,0,1,1,1,1,0,0],
+            // row 6
+            [0,0,1,0,0,1,0,0],
           ]
 
-          const dragonColors = { 1: '#cc0000', 2: '#7a0000', 3: '#ff9900' }
-          let dragonPixels = ''
-          dragon.forEach((row, ri) => {
-            row.forEach((val, ci) => {
-              if (val === 0) return
-              dragonPixels += `<rect x="${dx + ci*ps}" y="${dy + ri*ps + 10}" width="${ps}" height="${ps}" fill="${dragonColors[val]}"/>\n`
+          const dc = { 1: '#cc0000', 2: '#880000', 3: '#ffcc00' }
+          const dragonW = 8 * ps
+          const dragonH = 7 * ps
+          const ox = -dragonW / 2
+          const oy = -dragonH / 2
+
+          let dragonPx = ''
+          dragonPixels.forEach((row, ri) => {
+            row.forEach((v, ci) => {
+              if (!v) return
+              dragonPx += `<rect x="${ox + ci*ps}" y="${oy + ri*ps}" width="${ps}" height="${ps}" fill="${dc[v]}"/>`
             })
           })
 
-          // Fire breath animation
-          const fireX = dx
-          const fireY = dy + 2 * ps + 10
-          const firePath = `M${fireX},${fireY} Q${fireX-20},${fireY+8} ${fireX-40},${fireY+4} Q${fireX-20},${fireY+16} ${fireX-50},${fireY+20}`
+          // Fire breath pixels (to the right of dragon head)
+          const fire = [
+            [0,3,3,0,0],
+            [3,3,3,3,0],
+            [3,3,3,3,3],
+            [3,3,3,3,0],
+            [0,3,3,0,0],
+          ]
+          let firePx = ''
+          fire.forEach((row, ri) => {
+            row.forEach((v, ci) => {
+              if (!v) return
+              const alpha = 1 - ci * 0.18
+              firePx += `<rect x="${ox + dragonW + ci*ps}" y="${oy + ri*ps + ps}" width="${ps}" height="${ps}" fill="#ff6600" opacity="${alpha.toFixed(2)}"/>`
+            })
+          })
 
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
-            <defs>
-              <radialGradient id="fireglow" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" style="stop-color:#ff9900;stop-opacity:0.8"/>
-                <stop offset="100%" style="stop-color:#cc0000;stop-opacity:0"/>
-              </radialGradient>
-            </defs>
+          // Tail segments — 3 body segments behind dragon
+          const tailSegs = [-1, -2, -3].map(offset => {
+            const frac = Math.abs(offset) * 0.08
+            return `
+              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" keyPoints="0;1" keyTimes="0;1" calcMode="linear" begin="${Math.abs(offset) * (totalDur/pathPoints.length)}s">
+                <mpath href="#dragonPath"/>
+              </animateMotion>`
+          })
+
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+            width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
 
             <!-- Background -->
-            <rect width="${svgW}" height="${svgH}" fill="#0d1117" rx="8"/>
+            <rect width="${svgW}" height="${svgH}" fill="#0d1117" rx="6"/>
 
-            <!-- Title -->
-            <text x="${padLeft}" y="30" font-family="'Courier New',monospace" font-size="12"
-              fill="#ff2d55" letter-spacing="3" opacity="0.9">CONTRIBUTION DRAGON</text>
-            <line x1="${padLeft}" y1="38" x2="${padLeft + gridW}" y2="38" stroke="#ff2d55" stroke-width="0.5" opacity="0.3"/>
+            <!-- Label -->
+            <text x="${padX}" y="28" font-family="'Courier New',monospace" font-size="11"
+              fill="#cc0000" letter-spacing="3" font-weight="bold">CONTRIBUTION DRAGON</text>
+            <line x1="${padX}" y1="35" x2="${gridW + padX}" y2="35" stroke="#cc0000" stroke-width="0.5" opacity="0.4"/>
 
-            <!-- Contribution grid -->
+            <!-- Grid cells -->
             ${cells}
 
-            <!-- Dragon sprite -->
-            ${dragonPixels}
+            <!-- Hidden motion path -->
+            <path id="dragonPath" d="${motionPath}" fill="none" stroke="none"/>
 
-            <!-- Fire breath (animated) -->
-            <path d="${firePath}" stroke="#ff9900" stroke-width="3" fill="none" opacity="0" stroke-linecap="round">
-              <animate attributeName="opacity" values="0;0.9;0.6;0.9;0" dur="2s" repeatCount="indefinite"/>
-              <animate attributeName="stroke-width" values="3;5;3;5;3" dur="2s" repeatCount="indefinite"/>
-            </path>
-            <path d="${firePath}" stroke="#ffcc00" stroke-width="1.5" fill="none" opacity="0" stroke-linecap="round">
-              <animate attributeName="opacity" values="0;1;0.7;1;0" dur="2s" repeatCount="indefinite" begin="0.1s"/>
-            </path>
+            <!-- Tail segment 3 -->
+            <g opacity="0.4">
+              <rect x="${ox+1}" y="${oy+2}" width="${dragonW-4}" height="${dragonH-4}" rx="2" fill="#880000"/>
+              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto">
+                <mpath xlink:href="#dragonPath"/>
+              </animateMotion>
+            </g>
 
-            <!-- Glow under dragon -->
-            <ellipse cx="${dx + 20}" cy="${dy + 55}" rx="20" ry="6" fill="url(#fireglow)">
-              <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/>
-            </ellipse>
+            <!-- Tail segment 2 -->
+            <g opacity="0.6">
+              <rect x="${ox+1}" y="${oy+2}" width="${dragonW-4}" height="${dragonH-4}" rx="2" fill="#aa0000"/>
+              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" begin="-${totalDur * 0.015}s">
+                <mpath xlink:href="#dragonPath"/>
+              </animateMotion>
+            </g>
+
+            <!-- Tail segment 1 -->
+            <g opacity="0.8">
+              <rect x="${ox+1}" y="${oy+2}" width="${dragonW-4}" height="${dragonH-4}" rx="2" fill="#cc0000"/>
+              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" begin="-${totalDur * 0.03}s">
+                <mpath xlink:href="#dragonPath"/>
+              </animateMotion>
+            </g>
+
+            <!-- Dragon head + fire -->
+            <g>
+              ${dragonPx}
+              ${firePx}
+              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" begin="-${totalDur * 0.045}s">
+                <mpath xlink:href="#dragonPath"/>
+              </animateMotion>
+            </g>
 
             <!-- Legend -->
-            <text x="${padLeft}" y="${padTop + gridH + 20}" font-family="'Courier New',monospace"
-              font-size="9" fill="#8b949e" letter-spacing="1">LESS</text>
-            ${colors.map((c, i) => `<rect x="${padLeft + 35 + i*16}" y="${padTop + gridH + 10}" width="12" height="12" rx="2" fill="${c}"/>`).join('')}
-            <text x="${padLeft + 35 + colors.length*16 + 4}" y="${padTop + gridH + 20}"
-              font-family="'Courier New',monospace" font-size="9" fill="#8b949e" letter-spacing="1">MORE</text>
+            <text x="${padX}" y="${padY + gridH + 22}" font-family="'Courier New',monospace"
+              font-size="9" fill="#8b949e">Less</text>
+            ${colors.map((c, i) => `<rect x="${padX + 32 + i*16}" y="${padY + gridH + 12}" width="12" height="12" rx="2" fill="${c}"/>`).join('')}
+            <text x="${padX + 32 + colors.length*16 + 4}" y="${padY + gridH + 22}"
+              font-family="'Courier New',monospace" font-size="9" fill="#8b949e">More</text>
           </svg>`
 
           fs.mkdirSync('dist', { recursive: true })
           fs.writeFileSync('dist/dragon-contribution-graph.svg', svg)
-          console.log('Dragon SVG generated.')
-          EOF
+          console.log('Done.')
+          SCRIPT
           node generate.mjs
 
       - name: Push to output branch
