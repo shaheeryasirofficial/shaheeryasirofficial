@@ -16,103 +16,76 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - name: Generate SVG via snk action
+        uses: Platane/snk/svg-only@v3
+        with:
+          github_user_name: ${{ github.repository_owner }}
+          outputs: |
+            dist/dragon-contribution-graph.svg?palette=github-dark
 
       - name: Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18
 
-      - name: Install snk
-        run: npm install @platane/snk
-
-      - name: Patch dragon sprite and generate SVG
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          USERNAME: ${{ github.repository_owner }}
+      - name: Replace pacman sprite with dragon
         run: |
-          cat << 'SCRIPT' > patch-and-generate.mjs
-          import fs from 'fs'
-          import path from 'path'
-
-          // Find the snk svg-only dist file
-          const snkDir = path.resolve('node_modules/@platane/snk')
-          const files = fs.readdirSync(snkDir, { recursive: true })
-          console.log('snk files:', files.slice(0, 20))
-
-          // Dragon sprite frames — each frame is a 12x12 pixel grid
-          // Format: array of rows, each row is array of [r,g,b,a] or 0 for transparent
-          // We'll generate frames as base64 PNG data URIs embedded in the SVG
-
-          // Instead — use the CLI directly then post-process the SVG to replace pacman sprite
-          SCRIPT
-
-          # Use snk CLI to generate the base SVG with dark palette
-          npx @platane/snk \
-            --user-name $USERNAME \
-            --out dist/dragon-contribution-graph.svg \
-            --color-scheme github-dark \
-            --gif-out dist/dragon-contribution-graph.gif 2>/dev/null || \
-          npx @platane/snk \
-            --user-name $USERNAME \
-            --out dist/dragon-contribution-graph.svg \
-            --color-scheme github-dark
-
-          ls -la dist/
-
-      - name: Post-process SVG — replace pacman with dragon sprite
-        run: |
-          cat << 'SCRIPT' > replace-sprite.mjs
+          cat << 'SCRIPT' > replace.mjs
           import fs from 'fs'
 
           const svgPath = 'dist/dragon-contribution-graph.svg'
           let svg = fs.readFileSync(svgPath, 'utf8')
 
-          // Dragon sprite as SVG symbol — pixel art 12x12 at 1px grid
-          // Colors: body=#cc0000, wing=#880000, eye=#ffcc00, fire=#ff6600
-          const dragonSymbol = `
-          <defs>
-            <g id="dragon-sprite">
-              <!-- Body -->
-              <rect x="2" y="3" width="8" height="6" rx="1" fill="#cc0000"/>
-              <!-- Head bump -->
-              <rect x="7" y="1" width="4" height="4" rx="1" fill="#cc0000"/>
-              <!-- Eye -->
-              <rect x="9" y="2" width="1" height="1" fill="#ffcc00"/>
-              <!-- Wing top -->
-              <rect x="1" y="2" width="3" height="2" fill="#880000" transform="skewX(-10)"/>
-              <!-- Wing bottom -->
-              <rect x="1" y="6" width="3" height="2" fill="#880000" transform="skewX(10)"/>
-              <!-- Tail -->
-              <rect x="0" y="5" width="3" height="1" fill="#aa0000"/>
-              <rect x="0" y="4" width="1" height="1" fill="#aa0000"/>
-              <!-- Legs -->
-              <rect x="3" y="9" width="2" height="2" fill="#aa0000"/>
-              <rect x="7" y="9" width="2" height="2" fill="#aa0000"/>
-              <!-- Fire breath (to the right of head) -->
-              <rect x="11" y="2" width="3" height="1" fill="#ff6600" opacity="0.9"/>
-              <rect x="11" y="3" width="4" height="1" fill="#ff8800" opacity="0.7"/>
-              <rect x="11" y="4" width="3" height="1" fill="#ff6600" opacity="0.5"/>
-            </g>
-          </defs>`
+          // Dragon pixel art — 14px wide, 14px tall, origin at 0,0
+          const dragon = `
+            <!-- Dragon body -->
+            <rect x="3" y="4" width="8" height="7" rx="1" fill="#cc0000"/>
+            <!-- Head -->
+            <rect x="8" y="1" width="5" height="5" rx="1" fill="#cc0000"/>
+            <!-- Snout -->
+            <rect x="12" y="3" width="2" height="2" fill="#aa0000"/>
+            <!-- Eye -->
+            <rect x="10" y="2" width="1.5" height="1.5" fill="#ffcc00"/>
+            <!-- Horn -->
+            <rect x="9" y="0" width="1.5" height="2" fill="#880000"/>
+            <!-- Wing upper -->
+            <rect x="1" y="2" width="4" height="3" rx="1" fill="#880000"/>
+            <rect x="0" y="1" width="2" height="2" fill="#660000"/>
+            <!-- Wing lower -->
+            <rect x="1" y="7" width="4" height="3" rx="1" fill="#880000"/>
+            <rect x="0" y="8" width="2" height="2" fill="#660000"/>
+            <!-- Tail -->
+            <rect x="0" y="5" width="4" height="2" fill="#aa0000"/>
+            <!-- Legs -->
+            <rect x="4" y="11" width="2" height="2" fill="#aa0000"/>
+            <rect x="8" y="11" width="2" height="2" fill="#aa0000"/>
+            <!-- Fire breath -->
+            <rect x="14" y="2" width="4" height="1.5" fill="#ff6600" opacity="0.95"/>
+            <rect x="14" y="3.5" width="5" height="1.5" fill="#ff8800" opacity="0.8"/>
+            <rect x="14" y="5" width="4" height="1.5" fill="#ffaa00" opacity="0.6"/>
+            <rect x="14" y="6.5" width="3" height="1" fill="#ff6600" opacity="0.4"/>`
 
-          // The snk SVG uses <use href="#pacman0"> and <use href="#pacman1"> for animation frames
-          // Replace the pacman symbol definitions with our dragon
-          // Find and replace pacman symbol blocks
-          svg = svg.replace(/<symbol id="pacman[^"]*"[\s\S]*?<\/symbol>/g, '')
+          // snk defines pacman as <symbol id="p0"> and <symbol id="p1"> (open/closed mouth)
+          // Replace both symbol contents with dragon, keep the symbol wrapper and id
+          svg = svg.replace(
+            /(<symbol[^>]*id="p\d+"[^>]*>)([\s\S]*?)(<\/symbol>)/g,
+            (match, open, content, close) => `${open}${dragon}${close}`
+          )
 
-          // Add dragon symbol after opening <svg> tag
-          svg = svg.replace(/(<svg[^>]*>)/, `$1${dragonSymbol}`)
-
-          // Replace pacman use references with dragon
-          svg = svg.replace(/href="#pacman\d+"/g, 'href="#dragon-sprite"')
-          svg = svg.replace(/xlink:href="#pacman\d+"/g, 'xlink:href="#dragon-sprite"')
+          // Also try alternate id patterns snk might use
+          svg = svg.replace(
+            /(<symbol[^>]*id="pacman[^"]*"[^>]*>)([\s\S]*?)(<\/symbol>)/g,
+            (match, open, content, close) => `${open}${dragon}${close}`
+          )
 
           fs.writeFileSync(svgPath, svg)
-          console.log('Dragon sprite patched.')
+
+          // Log what symbols exist for debugging
+          const symbols = [...svg.matchAll(/<symbol[^>]*id="([^"]+)"/g)].map(m => m[1])
+          console.log('Symbols found:', symbols)
+          console.log('Dragon patched successfully.')
           SCRIPT
-          node replace-sprite.mjs
+          node replace.mjs
 
       - name: Push to output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
