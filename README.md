@@ -34,8 +34,8 @@
 | Project | Description |
 |---|---|
 | [ClickMyPayload](https://github.com/shaheeryasirofficial/ClickMyPayload) | Browser-based Clickfix generator |
-| [SmuggleMyPayload](https://github.com/shaheeryasirofficial/SmuggleMyPayload) | HTML smuggling toolkit — embeds and reconstructs payloads client-side via JS to bypass network controls |
-| [project-scorpio](https://github.com/shaheeryasirofficial/project-scorpio) | Windows process injection loader — PPID spoofing, manual DLL mapping, module stomping, direct NT syscall resolution |
+| [SmuggleMyPayload](https://github.com/shaheeryasirofficial/SmuggleMyPayload) | HTML smuggling toolkit embeds and reconstructs payloads client-side via JS to bypass network controls |
+| [project-scorpio](https://github.com/shaheeryasirofficial/project-scorpio) | Windows process injection loader PPID spoofing, manual DLL mapping, module stomping, direct NT syscall resolution |
 | [Red-Team-Rust](https://github.com/shaheeryasirofficial/Red-Team-Rust) | Rust notes and tooling for red team tooling, malware dev, and systems programming |
 
 <div align="center">
