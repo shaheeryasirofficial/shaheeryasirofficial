@@ -4,6 +4,10 @@
 
 <br/>
 
+<img src="banner.jpg" width="600" />
+
+<br/>
+
 [![Blog](https://img.shields.io/badge/top--gun--diary-gitbook-58A6FF?style=flat-square&logo=gitbook&logoColor=white)](https://top-gun-diary.gitbook.io/blog)
 &nbsp;
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Shaheer_Yasir-0077B5?style=flat-square&logo=linkedin&logoColor=white)](https://linkedin.com/in/shaheer-yasir)
@@ -34,9 +38,15 @@
 | Project | Description |
 |---|---|
 | [ClickMyPayload](https://github.com/shaheeryasirofficial/ClickMyPayload) | Browser-based Clickfix generator |
-| [SmuggleMyPayload](https://github.com/shaheeryasirofficial/SmuggleMyPayload) | HTML smuggling toolkit embeds and reconstructs payloads client-side via JS to bypass network controls |
-| [project-scorpio](https://github.com/shaheeryasirofficial/project-scorpio) | Windows process injection loader PPID spoofing, manual DLL mapping, module stomping, direct NT syscall resolution |
+| [SmuggleMyPayload](https://github.com/shaheeryasirofficial/SmuggleMyPayload) | HTML smuggling toolkit  embeds and reconstructs payloads client-side via JS to bypass network controls |
+| [project-scorpio](https://github.com/shaheeryasirofficial/project-scorpio) | Windows process injection loader  PPID spoofing, manual DLL mapping, module stomping, direct NT syscall resolution |
 | [Red-Team-Rust](https://github.com/shaheeryasirofficial/Red-Team-Rust) | Rust notes and tooling for red team tooling, malware dev, and systems programming |
+
+---
+
+<div align="center">
+<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/output/pacman-contribution-graph.svg" alt="pacman contribution graph" />
+</div>
 
 <div align="center">
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:16213e,50:1a1a2e,100:0d1117&height=100&section=footer" width="100%" />
