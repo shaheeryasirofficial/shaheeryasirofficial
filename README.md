@@ -23,10 +23,10 @@
 <img src="https://skillicons.dev/icons?i=c,cpp,rust,go,py,powershell&theme=dark" /><br/>
 <img src="https://skillicons.dev/icons?i=aws,azure,gcp,linux,windows&theme=dark" /><br/>
 
+<img src="https://raw.githubusercontent.com/HavocFramework/Havoc/main/assets/png/HavocLogo.png" height="40" alt="Havoc" />&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/BishopFox/sliver/master/server/assets/sliver-logo.png" height="40" alt="Sliver" />&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/its-a-feature/Mythic/master/documentation-payload/assets/mythic-logo.png" height="40" alt="Mythic" />&nbsp;&nbsp;
 ![Cobalt Strike](https://img.shields.io/badge/Cobalt%20Strike-CC0000?style=for-the-badge&logoColor=white)
-![Havoc](https://img.shields.io/badge/Havoc-111111?style=for-the-badge&logoColor=white)
-![Sliver](https://img.shields.io/badge/Sliver-4B0082?style=for-the-badge&logoColor=white)
-![Mythic](https://img.shields.io/badge/Mythic-1a1a2e?style=for-the-badge&logoColor=white)
 
 </div>
 
