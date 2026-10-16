@@ -1,16 +1,8 @@
 <div align="center">
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&weight=600&size=18&pause=1000&color=58A6FF&center=true&vCenter=true&repeat=true&width=500&lines=maverick%40skynetcorp%3A~%24+whoami" alt="Typing SVG" />
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,50:1a1a2e,100:16213e&height=200&section=header&text=maverick%40skynetcorp&fontSize=40&fontColor=58A6FF&fontAlignY=38&desc=Red%20Team%20Content%20Lead%20%40%20Pwned%20Labs&descSize=16&descAlignY=58&descColor=8b949e&animation=fadeIn" width="100%" />
 
 <br/>
-
-<img src="https://media.giphy.com/media/LQuvljSONn2aYOW7Eu/giphy.gif" width="600" alt="Top Gun Maverick" />
-
-<br/><br/>
-
-Red Team Content Lead @ Pwned Labs
-
-<br/><br/>
 
 [![Blog](https://img.shields.io/badge/top--gun--diary-gitbook-58A6FF?style=flat-square&logo=gitbook&logoColor=white)](https://top-gun-diary.gitbook.io/blog)
 &nbsp;
@@ -42,6 +34,10 @@ Red Team Content Lead @ Pwned Labs
 | Project | Description |
 |---|---|
 | [ClickMyPayload](https://github.com/shaheeryasirofficial/ClickMyPayload) | Browser-based Clickfix generator |
-| [SmuggleMyPayload](https://github.com/shaheeryasirofficial/SmuggleMyPayload) | HTML smuggling toolkit  embeds and reconstructs payloads client-side via JS to bypass network controls |
-| [project-scorpio](https://github.com/shaheeryasirofficial/project-scorpio) | Windows process injection loader  PPID spoofing, manual DLL mapping, module stomping, direct NT syscall resolution |
+| [SmuggleMyPayload](https://github.com/shaheeryasirofficial/SmuggleMyPayload) | HTML smuggling toolkit — embeds and reconstructs payloads client-side via JS to bypass network controls |
+| [project-scorpio](https://github.com/shaheeryasirofficial/project-scorpio) | Windows process injection loader — PPID spoofing, manual DLL mapping, module stomping, direct NT syscall resolution |
 | [Red-Team-Rust](https://github.com/shaheeryasirofficial/Red-Team-Rust) | Rust notes and tooling for red team tooling, malware dev, and systems programming |
+
+<div align="center">
+<img src="https://capsule-render.vercel.app/api?type=waving&color=0:16213e,50:1a1a2e,100:0d1117&height=100&section=footer" width="100%" />
+</div>
