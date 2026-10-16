@@ -24,214 +24,95 @@ jobs:
         with:
           node-version: 18
 
-      - name: Generate dragon SVG
+      - name: Install snk
+        run: npm install @platane/snk
+
+      - name: Patch dragon sprite and generate SVG
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           USERNAME: ${{ github.repository_owner }}
         run: |
-          cat << 'SCRIPT' > generate.mjs
+          cat << 'SCRIPT' > patch-and-generate.mjs
+          import fs from 'fs'
+          import path from 'path'
+
+          // Find the snk svg-only dist file
+          const snkDir = path.resolve('node_modules/@platane/snk')
+          const files = fs.readdirSync(snkDir, { recursive: true })
+          console.log('snk files:', files.slice(0, 20))
+
+          // Dragon sprite frames — each frame is a 12x12 pixel grid
+          // Format: array of rows, each row is array of [r,g,b,a] or 0 for transparent
+          // We'll generate frames as base64 PNG data URIs embedded in the SVG
+
+          // Instead — use the CLI directly then post-process the SVG to replace pacman sprite
+          SCRIPT
+
+          # Use snk CLI to generate the base SVG with dark palette
+          npx @platane/snk \
+            --user-name $USERNAME \
+            --out dist/dragon-contribution-graph.svg \
+            --color-scheme github-dark \
+            --gif-out dist/dragon-contribution-graph.gif 2>/dev/null || \
+          npx @platane/snk \
+            --user-name $USERNAME \
+            --out dist/dragon-contribution-graph.svg \
+            --color-scheme github-dark
+
+          ls -la dist/
+
+      - name: Post-process SVG — replace pacman with dragon sprite
+        run: |
+          cat << 'SCRIPT' > replace-sprite.mjs
           import fs from 'fs'
 
-          const username = process.env.USERNAME
-          const token = process.env.GITHUB_TOKEN
+          const svgPath = 'dist/dragon-contribution-graph.svg'
+          let svg = fs.readFileSync(svgPath, 'utf8')
 
-          const query = `{
-            user(login: "${username}") {
-              contributionsCollection {
-                contributionCalendar {
-                  weeks {
-                    contributionDays {
-                      contributionCount
-                      date
-                    }
-                  }
-                }
-              }
-            }
-          }`
-
-          const res = await fetch('https://api.github.com/graphql', {
-            method: 'POST',
-            headers: {
-              'Authorization': `bearer ${token}`,
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ query })
-          })
-
-          const data = await res.json()
-          const weeks = data.data.user.contributionsCollection.contributionCalendar.weeks
-
-          const cell = 12
-          const gap = 3
-          const padX = 16
-          const padY = 50
-          const cols = weeks.length
-          const rows = 7
-          const gridW = cols * (cell + gap)
-          const gridH = rows * (cell + gap)
-          const svgW = gridW + padX * 2
-          const svgH = gridH + padY + 50
-
-          const colors = ['#161b22', '#3d0000', '#7a0000', '#b30000', '#ff2d55']
-          const getColor = c => c === 0 ? colors[0] : c <= 2 ? colors[1] : c <= 5 ? colors[2] : c <= 10 ? colors[3] : colors[4]
-
-          // Build cells and collect "eaten" cell positions (non-zero contributions)
-          let cells = ''
-          const trail = [] // positions dragon will pass through
-
-          weeks.forEach((week, wi) => {
-            week.contributionDays.forEach((day, di) => {
-              const x = padX + wi * (cell + gap)
-              const y = padY + di * (cell + gap)
-              const color = getColor(day.contributionCount)
-              const id = `c${wi}_${di}`
-              cells += `<rect id="${id}" x="${x}" y="${y}" width="${cell}" height="${cell}" rx="2" fill="${color}"/>\n`
-              if (day.contributionCount > 0) trail.push({ x: x + cell/2, y: y + cell/2, id })
-            })
-          })
-
-          // Dragon motion path — snake through rows like the snk action
-          // Build a serpentine path across the grid
-          let pathPoints = []
-          for (let di = 0; di < rows; di++) {
-            if (di % 2 === 0) {
-              for (let wi = 0; wi < cols; wi++) {
-                pathPoints.push({ x: padX + wi*(cell+gap) + cell/2, y: padY + di*(cell+gap) + cell/2 })
-              }
-            } else {
-              for (let wi = cols-1; wi >= 0; wi--) {
-                pathPoints.push({ x: padX + wi*(cell+gap) + cell/2, y: padY + di*(cell+gap) + cell/2 })
-              }
-            }
-          }
-
-          const motionPath = 'M ' + pathPoints.map(p => `${p.x},${p.y}`).join(' L ')
-          const totalDur = 20 // seconds for full loop
-
-          // Dragon sprite as inline SVG group (pixel art, 5x7 pixels at size 3)
-          // Head facing right
-          const ps = 3
-          const dragonPixels = [
-            // row 0
-            [0,0,1,1,0,0,1,0],
-            // row 1
-            [0,1,1,1,1,1,1,0],
-            // row 2
-            [1,1,3,1,1,1,1,1],
-            // row 3
-            [1,1,1,1,1,1,1,1],
-            // row 4
-            [0,2,1,1,1,1,2,0],
-            // row 5
-            [0,0,1,1,1,1,0,0],
-            // row 6
-            [0,0,1,0,0,1,0,0],
-          ]
-
-          const dc = { 1: '#cc0000', 2: '#880000', 3: '#ffcc00' }
-          const dragonW = 8 * ps
-          const dragonH = 7 * ps
-          const ox = -dragonW / 2
-          const oy = -dragonH / 2
-
-          let dragonPx = ''
-          dragonPixels.forEach((row, ri) => {
-            row.forEach((v, ci) => {
-              if (!v) return
-              dragonPx += `<rect x="${ox + ci*ps}" y="${oy + ri*ps}" width="${ps}" height="${ps}" fill="${dc[v]}"/>`
-            })
-          })
-
-          // Fire breath pixels (to the right of dragon head)
-          const fire = [
-            [0,3,3,0,0],
-            [3,3,3,3,0],
-            [3,3,3,3,3],
-            [3,3,3,3,0],
-            [0,3,3,0,0],
-          ]
-          let firePx = ''
-          fire.forEach((row, ri) => {
-            row.forEach((v, ci) => {
-              if (!v) return
-              const alpha = 1 - ci * 0.18
-              firePx += `<rect x="${ox + dragonW + ci*ps}" y="${oy + ri*ps + ps}" width="${ps}" height="${ps}" fill="#ff6600" opacity="${alpha.toFixed(2)}"/>`
-            })
-          })
-
-          // Tail segments — 3 body segments behind dragon
-          const tailSegs = [-1, -2, -3].map(offset => {
-            const frac = Math.abs(offset) * 0.08
-            return `
-              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" keyPoints="0;1" keyTimes="0;1" calcMode="linear" begin="${Math.abs(offset) * (totalDur/pathPoints.length)}s">
-                <mpath href="#dragonPath"/>
-              </animateMotion>`
-          })
-
-          const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
-            width="${svgW}" height="${svgH}" viewBox="0 0 ${svgW} ${svgH}">
-
-            <!-- Background -->
-            <rect width="${svgW}" height="${svgH}" fill="#0d1117" rx="6"/>
-
-            <!-- Label -->
-            <text x="${padX}" y="28" font-family="'Courier New',monospace" font-size="11"
-              fill="#cc0000" letter-spacing="3" font-weight="bold">CONTRIBUTION DRAGON</text>
-            <line x1="${padX}" y1="35" x2="${gridW + padX}" y2="35" stroke="#cc0000" stroke-width="0.5" opacity="0.4"/>
-
-            <!-- Grid cells -->
-            ${cells}
-
-            <!-- Hidden motion path -->
-            <path id="dragonPath" d="${motionPath}" fill="none" stroke="none"/>
-
-            <!-- Tail segment 3 -->
-            <g opacity="0.4">
-              <rect x="${ox+1}" y="${oy+2}" width="${dragonW-4}" height="${dragonH-4}" rx="2" fill="#880000"/>
-              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto">
-                <mpath xlink:href="#dragonPath"/>
-              </animateMotion>
+          // Dragon sprite as SVG symbol — pixel art 12x12 at 1px grid
+          // Colors: body=#cc0000, wing=#880000, eye=#ffcc00, fire=#ff6600
+          const dragonSymbol = `
+          <defs>
+            <g id="dragon-sprite">
+              <!-- Body -->
+              <rect x="2" y="3" width="8" height="6" rx="1" fill="#cc0000"/>
+              <!-- Head bump -->
+              <rect x="7" y="1" width="4" height="4" rx="1" fill="#cc0000"/>
+              <!-- Eye -->
+              <rect x="9" y="2" width="1" height="1" fill="#ffcc00"/>
+              <!-- Wing top -->
+              <rect x="1" y="2" width="3" height="2" fill="#880000" transform="skewX(-10)"/>
+              <!-- Wing bottom -->
+              <rect x="1" y="6" width="3" height="2" fill="#880000" transform="skewX(10)"/>
+              <!-- Tail -->
+              <rect x="0" y="5" width="3" height="1" fill="#aa0000"/>
+              <rect x="0" y="4" width="1" height="1" fill="#aa0000"/>
+              <!-- Legs -->
+              <rect x="3" y="9" width="2" height="2" fill="#aa0000"/>
+              <rect x="7" y="9" width="2" height="2" fill="#aa0000"/>
+              <!-- Fire breath (to the right of head) -->
+              <rect x="11" y="2" width="3" height="1" fill="#ff6600" opacity="0.9"/>
+              <rect x="11" y="3" width="4" height="1" fill="#ff8800" opacity="0.7"/>
+              <rect x="11" y="4" width="3" height="1" fill="#ff6600" opacity="0.5"/>
             </g>
+          </defs>`
 
-            <!-- Tail segment 2 -->
-            <g opacity="0.6">
-              <rect x="${ox+1}" y="${oy+2}" width="${dragonW-4}" height="${dragonH-4}" rx="2" fill="#aa0000"/>
-              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" begin="-${totalDur * 0.015}s">
-                <mpath xlink:href="#dragonPath"/>
-              </animateMotion>
-            </g>
+          // The snk SVG uses <use href="#pacman0"> and <use href="#pacman1"> for animation frames
+          // Replace the pacman symbol definitions with our dragon
+          // Find and replace pacman symbol blocks
+          svg = svg.replace(/<symbol id="pacman[^"]*"[\s\S]*?<\/symbol>/g, '')
 
-            <!-- Tail segment 1 -->
-            <g opacity="0.8">
-              <rect x="${ox+1}" y="${oy+2}" width="${dragonW-4}" height="${dragonH-4}" rx="2" fill="#cc0000"/>
-              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" begin="-${totalDur * 0.03}s">
-                <mpath xlink:href="#dragonPath"/>
-              </animateMotion>
-            </g>
+          // Add dragon symbol after opening <svg> tag
+          svg = svg.replace(/(<svg[^>]*>)/, `$1${dragonSymbol}`)
 
-            <!-- Dragon head + fire -->
-            <g>
-              ${dragonPx}
-              ${firePx}
-              <animateMotion dur="${totalDur}s" repeatCount="indefinite" rotate="auto" begin="-${totalDur * 0.045}s">
-                <mpath xlink:href="#dragonPath"/>
-              </animateMotion>
-            </g>
+          // Replace pacman use references with dragon
+          svg = svg.replace(/href="#pacman\d+"/g, 'href="#dragon-sprite"')
+          svg = svg.replace(/xlink:href="#pacman\d+"/g, 'xlink:href="#dragon-sprite"')
 
-            <!-- Legend -->
-            <text x="${padX}" y="${padY + gridH + 22}" font-family="'Courier New',monospace"
-              font-size="9" fill="#8b949e">Less</text>
-            ${colors.map((c, i) => `<rect x="${padX + 32 + i*16}" y="${padY + gridH + 12}" width="12" height="12" rx="2" fill="${c}"/>`).join('')}
-            <text x="${padX + 32 + colors.length*16 + 4}" y="${padY + gridH + 22}"
-              font-family="'Courier New',monospace" font-size="9" fill="#8b949e">More</text>
-          </svg>`
-
-          fs.mkdirSync('dist', { recursive: true })
-          fs.writeFileSync('dist/dragon-contribution-graph.svg', svg)
-          console.log('Done.')
+          fs.writeFileSync(svgPath, svg)
+          console.log('Dragon sprite patched.')
           SCRIPT
-          node generate.mjs
+          node replace-sprite.mjs
 
       - name: Push to output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
