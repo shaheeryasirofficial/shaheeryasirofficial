@@ -1,4 +1,4 @@
-name: Generate pacman animation
+name: Generate space shooter animation
 
 on:
   schedule:
@@ -16,12 +16,12 @@ jobs:
     timeout-minutes: 5
 
     steps:
-      - name: generate snake dark
+      - name: generate space shooter dark
         uses: Platane/snk/svg-only@v3
         with:
           github_user_name: ${{ github.repository_owner }}
           outputs: |
-            dist/pacman-contribution-graph.svg?palette=github-dark
+            dist/space-shooter-contribution-graph.svg?palette=github-dark&type=shooter
 
       - name: push to output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
