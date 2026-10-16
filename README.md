@@ -23,10 +23,11 @@
 <img src="https://skillicons.dev/icons?i=c,cpp,rust,go,py,powershell&theme=dark" /><br/>
 <img src="https://skillicons.dev/icons?i=aws,azure,gcp,linux,windows&theme=dark" /><br/>
 
-<img src="https://raw.githubusercontent.com/HavocFramework/Havoc/main/assets/png/HavocLogo.png" height="40" alt="Havoc" />&nbsp;&nbsp;
-<img src="https://raw.githubusercontent.com/BishopFox/sliver/master/server/assets/sliver-logo.png" height="40" alt="Sliver" />&nbsp;&nbsp;
-<img src="https://raw.githubusercontent.com/its-a-feature/Mythic/master/documentation-payload/assets/mythic-logo.png" height="40" alt="Mythic" />&nbsp;&nbsp;
-![Cobalt Strike](https://img.shields.io/badge/Cobalt%20Strike-CC0000?style=for-the-badge&logoColor=white)
+<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/main/assets/cobalt.jpg" height="80" alt="Cobalt Strike" />&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/main/assets/havoc.svg" height="80" alt="Havoc" />&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/main/assets/sliver.png" height="80" alt="Sliver" />&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/main/assets/mythic.jpg" height="80" alt="Mythic" />&nbsp;&nbsp;
+<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/main/assets/adaptix.jpg" height="80" alt="Adaptix" />
 
 </div>
 
@@ -50,7 +51,7 @@
 ---
 
 <div align="center">
-<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/output/space-shooter-contribution-graph.svg" alt="space shooter contribution graph" />
+<img src="https://raw.githubusercontent.com/shaheeryasirofficial/shaheeryasirofficial/output/dragon-contribution-graph.svg" alt="dragon contribution graph" />
 </div>
 
 <div align="center">
