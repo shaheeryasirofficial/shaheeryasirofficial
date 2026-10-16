@@ -1,9 +1,5 @@
 <div align="center">
 
-<img src="https://capsule-render.vercel.app/api?type=waving&color=0:0d1117,50:1a1a2e,100:16213e&height=200&section=header&text=maverick%40skynetcorp&fontSize=40&fontColor=58A6FF&fontAlignY=38&desc=Red%20Team%20Content%20Lead%20%40%20Pwned%20Labs&descSize=16&descAlignY=58&descColor=8b949e&animation=fadeIn" width="100%" />
-
-<br/>
-
 <img src="banner.png" width="600" />
 
 <br/>
