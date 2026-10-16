@@ -14,13 +14,8 @@
 
 <div align="center">
 
-<img src="https://skillicons.dev/icons?i=c,cpp,rust,go,py,powershell&theme=dark" />
-
-<br/><br/>
-
-<img src="https://skillicons.dev/icons?i=aws,azure,gcp,linux,windows&theme=dark" />
-
-<br/><br/>
+<img src="https://skillicons.dev/icons?i=c,cpp,rust,go,py,powershell&theme=dark" /><br/>
+<img src="https://skillicons.dev/icons?i=aws,azure,gcp,linux,windows&theme=dark" /><br/>
 
 ![Cobalt Strike](https://img.shields.io/badge/Cobalt%20Strike-CC0000?style=for-the-badge&logoColor=white)
 ![Havoc](https://img.shields.io/badge/Havoc-111111?style=for-the-badge&logoColor=white)
@@ -37,6 +32,14 @@
 | [SmuggleMyPayload](https://github.com/shaheeryasirofficial/SmuggleMyPayload) | HTML smuggling toolkit  embeds and reconstructs payloads client-side via JS to bypass network controls |
 | [project-scorpio](https://github.com/shaheeryasirofficial/project-scorpio) | Windows process injection loader  PPID spoofing, manual DLL mapping, module stomping, direct NT syscall resolution |
 | [Red-Team-Rust](https://github.com/shaheeryasirofficial/Red-Team-Rust) | Rust notes and tooling for red team tooling, malware dev, and systems programming |
+
+---
+
+<div align="center">
+
+<img src="https://github-readme-activity-graph.vercel.app/graph?username=shaheeryasirofficial&bg_color=0d1117&color=58A6FF&line=1f6feb&point=58A6FF&area=true&area_color=1f6feb&hide_border=true" width="100%" />
+
+</div>
 
 ---
 
