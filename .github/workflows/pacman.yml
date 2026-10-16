@@ -20,6 +20,9 @@ jobs:
         uses: abozanona/pacman-contribution-graph@main
         with:
           github_user_name: ${{ github.repository_owner }}
+          background_color: "#0d1117"
+          dot_color: "#161b22"
+          color_scheme: "github-dark"
 
       - name: push pacman-contribution-graph.svg to the output branch
         uses: crazy-max/ghaction-github-pages@v3.1.0
